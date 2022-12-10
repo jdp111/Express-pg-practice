@@ -2,6 +2,7 @@ const express = require("express");
 const router = new express.Router();
 const db = require("../db");
 const ExpressError = require('../expressError')
+const slugify = require('slugify')
 
 
 router.get("/",async function(req,res,next){
@@ -38,8 +39,11 @@ router.get("/:code", async function(req,res,next){
 
 router.post("/",async function(req,res,next){
     try{
-        if (!req.body.code|| !req.body.name){
+        if (!req.body.name){
             throw new Error("input is not in the correct format, must be in form: {'code':<company code> ,'name': <company name>,'description': <company description>}")
+        }
+        if (!req.body.code){
+            req.body.code = slugify(req.body.name)
         }
         const inserted = await db.query(
             `INSERT INTO companies (code, name, description)
@@ -48,7 +52,8 @@ router.post("/",async function(req,res,next){
                 RETURNING *`, 
             [req.body.code, req.body.name, req.body.description]
         )
-            console.log(inserted)
+        console.log(inserted.rows[0])
+        
         if (inserted.rows.length === 0 ) {
             throw new Error(`company with code: ${req.body.code} and name: ${req.body.name} already exists in table`,404)
         }
@@ -98,6 +103,30 @@ router.delete("/:code",async function(req,res,next){
         next(err)
     }
 });
+
+router.update("/",async function(req,res,next){
+    try{
+        if (!req.body.industry_code || !req.body.company_code){
+            throw Error(`request must be in format: {company_code: "AAPL", industry_code: "TECH"}`)
+        }
+        
+        const verifyIndustry = await db.query(`
+            select * from industries where code = $1
+        `, [req.body.industry_code])
+
+        if (!verifyIndustry.rows){
+            throw Error(`the selected industry code does not exist`)
+        }
+
+        const addindustry = await db.query(`
+            insert into company_industries (c_code, i_code)
+            VALUES ($1,$2)`,
+            [req.body.company_code, req.body.industry_code])
+
+        return res.json({message: `industry: ${req.body.industry_code} added to company: ${req.body.company_code}`})
+
+    }catch(err){ next(err) }
+})
 
 
 module.exports = router

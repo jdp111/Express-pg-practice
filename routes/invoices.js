@@ -50,16 +50,26 @@ router.post("/",async function(req,res,next){
 
 router.put("/:id",async function(req,res,next){
     try{
-        if (!req.body.amt){
-            throw new Error(`invoice not updated, input must have format {'amt':<number>}`)
+        if (!req.body.amt|| typeof(req.body.paid) != "boolean"){
+            throw new Error(`invoice not updated, input must have format {'amt':<number>, 'paid':<true/false>}`)
         }
+
         const invoiceQuery = await db.query(
             `UPDATE invoices
-                SET amt = $2
+                SET amt = $2, paid = $3, paid_date = null
                 WHERE id = $1
                 RETURNING *`,
-            [req.params.id,req.body.amt]
+            [req.params.id,req.body.amt, req.body.paid]
         );
+
+        if (req.body.paid){
+            const updatePaid = await db.query(
+            `UPDATE invoices
+            SET paid_date = CURRENT_DATE
+            WHERE id = $1
+            RETURNING *`, [req.params.id])
+        }
+
 
         if (invoiceQuery.rows.length === 0 ) {
             throw new Error(`invoice not updated. Invoice with id ${req.params.id} does not exist`,404)
@@ -88,5 +98,7 @@ router.delete("/:id",async function(req,res,next){
         next(err)
     }
 });
+
+
 
 module.exports = router;

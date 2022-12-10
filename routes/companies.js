@@ -121,7 +121,8 @@ router.update("/",async function(req,res,next){
         const addindustry = await db.query(`
             insert into company_industries (c_code, i_code)
             VALUES ($1,$2)`,
-            [req.body.company_code, req.body.industry_code])
+            [req.body.company_code, req.body.industry_code]
+        )
 
         return res.json({message: `industry: ${req.body.industry_code} added to company: ${req.body.company_code}`})
 

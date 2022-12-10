@@ -61,7 +61,7 @@ router.put("/:id",async function(req,res,next){
                 RETURNING *`,
             [req.params.id,req.body.amt, req.body.paid]
         );
-
+            
         if (req.body.paid){
             const updatePaid = await db.query(
             `UPDATE invoices
